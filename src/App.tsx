@@ -7,8 +7,7 @@ import { CollageSelector } from './components/CollageSelector'
 import { SessionHistory } from './components/SessionHistory'
 import { StatusChecker } from './components/StatusChecker'
 import { useCamera } from './hooks/useCamera'
-import { FilterType } from './utils/filters'
-import { FrameConfig, CollageLayout, createCollageFromDataUrls } from './utils/captureWithFrame'
+import { CollageLayout, createCollageFromDataUrls } from './utils/captureWithFrame'
 
 interface StoredSession {
   id: string

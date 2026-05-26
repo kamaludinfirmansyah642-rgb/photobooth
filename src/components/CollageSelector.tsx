@@ -81,7 +81,6 @@ function LayoutPreview({ layout }: { layout: CollageLayout }) {
 
   const { cols, rows } = configs[layout]
   const cellSize = Math.min(40, 120 / Math.max(cols, rows))
-  const gap = 2
 
   return (
     <div className="flex justify-center">

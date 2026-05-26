@@ -1,43 +1,11 @@
 import { useState, useCallback } from 'react'
 import { FilterType, getFilterById } from '../utils/filters'
 import { FrameConfig, defaultFrames } from '../utils/captureWithFrame'
-import { captureFromVideoElement } from '../utils/captureHelper'
 
 interface PhotoPreviewProps {
   photoDataUrl: string
   onRetake: () => void
   onSave: (dataUrl: string) => void
-}
-
-function applyFrameToImage(photoUrl: string, frameUrl: string, opacity: number = 0.9): string {
-  return new Promise((resolve) => {
-    const img1 = new Image()
-    img1.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = img1.width
-      canvas.height = img1.height
-      const ctx = canvas.getContext('2d')
-      if (!ctx) { resolve(photoUrl); return }
-      
-      ctx.drawImage(img1, 0, 0)
-      
-      if (frameUrl) {
-        const img2 = new Image()
-        img2.crossOrigin = 'anonymous'
-        img2.onload = () => {
-          ctx.globalAlpha = opacity
-          ctx.drawImage(img2, 0, 0, canvas.width, canvas.height)
-          resolve(canvas.toDataURL('image/png'))
-        }
-        img2.onerror = () => resolve(photoUrl)
-        img2.src = frameUrl
-      } else {
-        resolve(photoUrl)
-      }
-    }
-    img1.onerror = () => resolve(photoUrl)
-    img1.src = photoUrl
-  }) as any
 }
 
 export function PhotoPreview({ photoDataUrl, onRetake, onSave }: PhotoPreviewProps) {
@@ -78,7 +46,7 @@ export function PhotoPreview({ photoDataUrl, onRetake, onSave }: PhotoPreviewPro
             // Load dan gambar frame
             const frameImg = new Image()
             frameImg.crossOrigin = 'anonymous'
-            await new Promise<void>((resolve, reject) => {
+            await new Promise<void>((resolve) => {
               frameImg.onload = () => {
                 ctx.globalAlpha = selectedFrame.opacity || 0.9
                 ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height)
