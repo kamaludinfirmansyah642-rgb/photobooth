@@ -4,7 +4,9 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
 export const prisma = globalForPrisma.prisma || new PrismaClient()
 
-if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+const isProduction = (import.meta as any)?.env?.MODE === 'production'
+
+if (!isProduction) {
   globalForPrisma.prisma = prisma
 }
 

@@ -48,7 +48,7 @@ function App() {
   
   const [isCollageMode, setIsCollageMode] = useState(false)
   const [collageLayout, setCollageLayout] = useState<CollageLayout>('2x2')
-  const [collagePhotos, setCollagePhotos] = useState<string[]>([])
+  const [, setCollagePhotos] = useState<string[]>([])
   const [showCollageSelector, setShowCollageSelector] = useState(false)
   const [collageCount, setCollageCount] = useState(0)
   const [countdownNum, setCountdownNum] = useState(3)
