@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Header } from './components/Header'
-import { Camera } from './components/Camera'
+import { Camera, type CameraRef } from './components/Camera'
 import { Controls } from './components/Controls'
 import { PhotoPreview } from './components/PhotoPreview'
 import { CollageSelector } from './components/CollageSelector'
@@ -8,6 +8,7 @@ import { SessionHistory } from './components/SessionHistory'
 import { StatusChecker } from './components/StatusChecker'
 import { useCamera } from './hooks/useCamera'
 import { CollageLayout, createCollageFromDataUrls } from './utils/captureWithFrame'
+
 
 interface StoredSession {
   id: string
@@ -18,12 +19,9 @@ interface StoredSession {
   frame: string | null
 }
 
-function captureNow(): string | null {
+function captureNow(video: HTMLVideoElement | null): string | null {
   try {
-    const videos = document.querySelectorAll('video')
-    if (videos.length === 0) return null
-    
-    const video = videos[0] as HTMLVideoElement
+    if (!video) return null
     if (video.videoWidth === 0 || video.videoHeight === 0) return null
 
     const canvas = document.createElement('canvas')
@@ -38,6 +36,7 @@ function captureNow(): string | null {
     return null
   }
 }
+
 
 function App() {
   const { stream, isActive, error, errorType, retryCamera } = useCamera()
@@ -58,6 +57,10 @@ function App() {
   const timerRef = useRef<any>(null)
   const isCapturing = useRef(false)
 
+  const cameraRef = useRef<CameraRef | null>(null)
+  const collagePhotosRef = useRef<string[]>([])
+
+
   useEffect(() => {
     const stored = localStorage.getItem('photobooth_sessions')
     if (stored) setSessions(JSON.parse(stored))
@@ -75,69 +78,83 @@ function App() {
   const doSingleCapture = () => {
     if (isCapturing.current) return
     isCapturing.current = true
-    
-    const dataUrl = captureNow()
+
+    const video = cameraRef.current?.getVideoElement() ?? null
+    const dataUrl = captureNow(video)
+
     if (dataUrl) {
       setPreviewDataUrl(dataUrl)
       setShowPreview(true)
     }
+
     isCapturing.current = false
   }
 
+
   const doCollage = () => {
     if (!isActive || isCapturing.current) return
-    
+
     isCapturing.current = true
+
+    collagePhotosRef.current = []
     setCollagePhotos([])
     setCollageCount(0)
+
     const total = getTotal(collageLayout)
-    
+
     const tick = (idx: number) => {
       if (idx >= total) {
         isCapturing.current = false
-        finishCollage()
+        finishCollage(collagePhotosRef.current)
         return
       }
 
       setCountdownNum(3)
       setIsAutoRunning(true)
-      
+
       let sec = 3
       timerRef.current = setInterval(() => {
         sec--
+
         if (sec > 0) {
           setCountdownNum(sec)
-        } else {
-          clearInterval(timerRef.current)
-          setIsAutoRunning(false)
-          
-// Tunda agar frame video siap
-           setTimeout(() => {
-             const dataUrl = captureNow()
-            if (dataUrl) {
-              setCollagePhotos((prev: string[]) => [...prev, dataUrl])
-              setCollageCount((prev: number) => prev + 1)
-              tick(idx + 1)
-            } else {
-              isCapturing.current = false
-            }
-}, 50)
-         }
-       }, 1000)
+          return
+        }
+
+        clearInterval(timerRef.current)
+        setIsAutoRunning(false)
+
+        // Beri sedikit waktu agar frame video benar-benar siap
+        setTimeout(() => {
+          const video = cameraRef.current?.getVideoElement() ?? null
+          const dataUrl = captureNow(video)
+
+          if (!dataUrl) {
+            isCapturing.current = false
+            return
+          }
+
+          collagePhotosRef.current = [...collagePhotosRef.current, dataUrl]
+          setCollagePhotos((prev: string[]) => [...prev, dataUrl])
+          setCollageCount((prev: number) => prev + 1)
+
+          tick(idx + 1)
+        }, 100)
+      }, 1000)
     }
 
     tick(0)
   }
 
-  const finishCollage = async () => {
-    const photos = collagePhotos
-    if (photos.length === 0) return
-    
+
+  const finishCollage = async (photos: string[]) => {
+    if (!photos || photos.length === 0) return
+
     try {
       const result = await createCollageFromDataUrls(photos, {
         layout: collageLayout,
         gap: 10,
-        backgroundColor: '#1e293b'
+        backgroundColor: '#1e293b',
       })
       setPreviewDataUrl(result.dataUrl)
       setShowPreview(true)
@@ -147,6 +164,7 @@ function App() {
       console.error('Gagal buat kolase:', err)
     }
   }
+
 
   const stopCapture = () => {
     if (timerRef.current) {
@@ -202,7 +220,8 @@ function App() {
       <Header />
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="relative">
-          <Camera stream={stream} isActive={isActive} error={error} errorType={errorType} onRetry={retryCamera} />
+          <Camera ref={cameraRef} stream={stream} isActive={isActive} error={error} errorType={errorType} onRetry={retryCamera} />
+
           
           {isAutoRunning && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 rounded-2xl">
